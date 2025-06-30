@@ -42,14 +42,34 @@ jobs:
         mv xbox_hdd.qcow2 artifact/xbox_hdd.qcow2
         mv build/xemu-dashboard.iso artifact/xemu-dashboard.iso
         mv build/default.xbe artifact/default.xbe
-        mv LICENSE artifact/LICENSE-xemu-dashboard
-        mv lib/ftpd/LICENSE artifact/LICENSE-ftpd
-        mv lib/nanoprintf/LICENSE artifact/LICENSE-nanoprintf
-        mv lib/stb/LICENSE artifact/LICENSE-stb
-        mv lib/xgu/LICENSE artifact/LICENSE-xgu
+        cp LICENSE artifact/LICENSE-xemu-dashboard
+        cp lib/ftpd/LICENSE artifact/LICENSE-ftpd
+        cp lib/nanoprintf/LICENSE artifact/LICENSE-nanoprintf
+        cp lib/stb/LICENSE artifact/LICENSE-stb
+        cp lib/xgu/LICENSE artifact/LICENSE-xgu
 
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
         name: xemu-dashboard
         path: artifact
+
+    - name: Set release tag name
+      id: release_tag
+      run: echo "tag=v$(date +'%Y%m%d-%H%M')" >> "$GITHUB_OUTPUT"
+
+    - name: Create Git tag
+      run: |
+        git config user.name "github-actions"
+        git config user.email "github-actions@github.com"
+        git tag "${{ steps.release_tag.outputs.tag }}"
+        git push origin "${{ steps.release_tag.outputs.tag }}"
+
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: ${{ steps.release_tag.outputs.tag }}
+        name: "Build ${{ steps.release_tag.outputs.tag }}"
+        files: artifcat/*
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
