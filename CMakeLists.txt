@@ -4,6 +4,17 @@ set(XBOX_ISO_DIR ${CMAKE_CURRENT_BINARY_DIR}/xiso)
 set(CMAKE_C_STANDARD 23)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
+include(FetchContent)
+
+if(NOT CMAKE_BUILD_TYPE)
+  message(STATUS "No build type specified, defaulting to Release")
+  set(CMAKE_BUILD_TYPE Release)
+endif()
+
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+  set(NXDK_DEBUG_FLAG "y" CACHE STRING "Enable debug build for the NXDK submodule. 'y' or 'n'.")
+endif()
+
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 include(PrebuildNXDK)
 
@@ -26,9 +37,9 @@ set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -g -gdwarf-4")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g -gdwarf-4")
 set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} -debug")
 
-set(CMAKE_ASM_FLAGS_RELEASE "${CMAKE_ASM_FLAGS_RELEASE} -O2")
-set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -O2")
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O2")
+set(CMAKE_ASM_FLAGS_RELEASE "${CMAKE_ASM_FLAGS_RELEASE} -O2 -flto")
+set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -O2 -flto")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O2 -flto")
 
 add_compile_options($<$<AND:$<CONFIG:Debug>,$<COMPILE_LANGUAGE:C>>:-gdwarf-4>)
 
@@ -70,12 +81,35 @@ target_link_libraries(xemu-dashboard PUBLIC ${SDL2_LIBRARIES})
 target_link_directories(xemu-dashboard PUBLIC ${SDL2_LIBRARY_DIRS})
 
 # Bring in mbed TLS support
+<<<<<<< Updated upstream
 message(STATUS "Downloading Mbed TLS")
+=======
+>>>>>>> Stashed changes
 FetchContent_Declare(
   mbedtls
   GIT_REPOSITORY https://github.com/Mbed-TLS/mbedtls.git
   GIT_TAG        v3.6.4
+<<<<<<< Updated upstream
   GIT_PROGRESS TRUE
+=======
+)
+set(CMAKE_C_SIMULATE_ID FALSE CACHE INTERNAL "Clang" FORCE)
+set(ENABLE_PROGRAMS OFF CACHE BOOL "Disable mbedtls programs")
+set(ENABLE_TESTING OFF CACHE BOOL "Disable Mbed TLS tests")
+set(UNSAFE_BUILD OFF CACHE BOOL "Disable unsafe build options")
+set(DISABLE_PACKAGE_CONFIG_AND_INSTALL OFF CACHE BOOL "Disable package config and install targets")
+add_definitions(
+  -DMBEDTLS_CHECK_RETURN= 
+  -DMBEDTLS_CONFIG_FILE=\"${CMAKE_CURRENT_SOURCE_DIR}/lib/mbedtls/my_mbedtls_config.h\"
+)
+FetchContent_MakeAvailable(mbedtls)
+target_include_directories(mbedx509 PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/lib/mbedtls)
+target_link_libraries(xemu-dashboard PUBLIC mbedtls)
+
+add_library(xbox_crypt STATIC
+    lib/crypt/sha1.c
+    lib/crypt/rc4.c
+>>>>>>> Stashed changes
 )
 set(CMAKE_C_SIMULATE_ID FALSE CACHE INTERNAL "Clang" FORCE)
 set(ENABLE_PROGRAMS OFF CACHE BOOL "Disable mbedtls programs")

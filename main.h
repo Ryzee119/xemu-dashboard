@@ -3,6 +3,7 @@
 #include <SDL.h>
 #include <assert.h>
 #include <nanoprintf/nanoprintf.h>
+#include <stb/stb_rect_pack.h>
 #include <stb/stb_truetype.h>
 #include <windows.h>
 
@@ -15,11 +16,11 @@
 #define ITEM_PADDING       10
 #define Y_MARGIN           20
 #define X_MARGIN           20
-#define FONT_BITMAP_WIDTH  512
+#define FONT_BITMAP_WIDTH  128
 #define FONT_BITMAP_HEIGHT 512
-#define HEADER_Y (Y_MARGIN + (int)HEADER_FONT_SIZE)
-#define MENU_Y (HEADER_Y + (int)BODY_FONT_SIZE + ITEM_PADDING)
-#define FOOTER_Y (WINDOW_HEIGHT - Y_MARGIN - (int)BODY_FONT_SIZE)
+#define HEADER_Y           (Y_MARGIN + (int)HEADER_FONT_SIZE)
+#define MENU_Y             (HEADER_Y + (int)BODY_FONT_SIZE + ITEM_PADDING)
+#define FOOTER_Y           (WINDOW_HEIGHT - Y_MARGIN - (int)BODY_FONT_SIZE)
 
 void _putc(int c, void *ctx);
 
@@ -51,6 +52,16 @@ typedef struct
     int scroll_offset;
 } Menu;
 
+typedef struct font
+{
+    stbtt_fontinfo font_info;
+    xgu_texture_t *texture;
+    stbtt_pack_range *range;
+    int range_count;
+    float line_height;
+    float scale;
+} font_t;
+
 extern HANDLE text_render_mutex;
 
 void menu_push(Menu *menu);
@@ -59,6 +70,7 @@ Menu *menu_pop(void);
 
 void network_initialise(void);
 void network_get_status(char *ip_address_buffer, char buffer_length);
+void check_for_update(void);
 
 int downloader_init(void);
 void downloader_deinit(void);
@@ -68,5 +80,6 @@ int downloader_download_update(char *download_url, void **mem, char **downloaded
 void autolaunch_dvd_runner(void);
 void main_menu_activate(void);
 
-void text_draw(stbtt_bakedchar *cdata, xgu_texture_t *body_text, const char *text, int x, int y, const xgu_texture_tint_t *tint);
-int text_calculate_width(stbtt_bakedchar *cdata, const char *text);
+int text_create(const unsigned char *ttf_data, float font_size, const int(*range)[2], int range_count, font_t *font);
+void text_draw(font_t *font, const char *text, int x, int y, const xgu_texture_tint_t *tint);
+int text_calculate_width(font_t *font, const char *text);

@@ -41,7 +41,7 @@ static void restore_backup()
         update_eeprom_text();
         dirty = 0;
 
-        static MenuItem menu_item = {"Backup restored successfully", NULL};
+        static MenuItem menu_item = {"KEY_BACKUP_SUCCESS", NULL};
         static Menu menu = {
             .item = &menu_item,
             .item_count = 1,
@@ -280,17 +280,17 @@ static void update_eeprom_text(void)
     pool_offset = 0;
     memset(menu_items, 0, sizeof(menu_items));
 
-    push_line(line++, NULL, "EEPROM Settings");
+    push_line(line++, NULL, "KEY_EEPROM_MENU_TITLE");
 
     if (dirty) {
-        push_line(line++, apply_settings, "Apply unsaved changes");
+        push_line(line++, apply_settings, "KEY_APPLY_CHANGES");
     } else {
-        push_line(line++, apply_settings, "Apply");
+        push_line(line++, apply_settings, "KEY_APPLY");
     }
 
     DWORD fileAttr = GetFileAttributesA("E:\\eeprom.bin");
     const BOOL eeprom_backup_exists = (fileAttr != INVALID_FILE_ATTRIBUTES && !(fileAttr & FILE_ATTRIBUTE_DIRECTORY));
-    push_line(line++, (eeprom_backup_exists) ? restore_backup : NULL, "Restore EEPROM Backup");
+    push_line(line++, (eeprom_backup_exists) ? restore_backup : NULL, "KEY_EEPROM_RESTORE");
 
     // clang-format off
     const char *eeprom_version_str = "Unknown";

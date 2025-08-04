@@ -3,10 +3,10 @@
  */
 
 #include <SDL.h>
+#include <hal/debug.h>
 #include <hal/video.h>
 #include <hal/xbox.h>
 #include <nxdk/mount.h>
-#include <hal/debug.h>
 #include <nxdk/path.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -14,6 +14,7 @@
 #include <string.h>
 #include <xgu/xgu.h>
 #include <xgu/xgux.h>
+#include <xbox_eeprom.h>
 
 #include "main.h"
 #include "support_renderer.h"
@@ -34,6 +35,9 @@
 #define NANOPRINTF_SNPRINTF_SAFE_EMPTY_STRING_ON_OVERFLOW
 #include <nanoprintf/nanoprintf.h>
 
+#define STB_RECT_PACK_IMPLEMENTATION
+#include <stb/stb_rect_pack.h>
+
 #define STB_TRUETYPE_IMPLEMENTATION
 #include <stb/stb_truetype.h>
 
@@ -53,11 +57,35 @@ static const xgu_texture_tint_t text_color = {255, 255, 255, 255};
 static const xgu_texture_tint_t header_color = {100, 100, 100, 255};
 static const xgu_texture_tint_t info_color = {128, 128, 128, 255};
 
-static unsigned char *font_texture_bitmap;
-static xgu_texture_t *body_text;
-static stbtt_bakedchar body_text_cdata[96];
-static xgu_texture_t *header_text;
-static stbtt_bakedchar header_text_cdata[96];
+
+const int range_simplified_chinese[][2] = {
+    {0x0020, 0x07E},  // Basic ASCII
+    {0x3000, 0x303F}, // CJK Symbols and Punctuation
+    {0x4E00, 0x9FFF}, // Core CJK Unified Ideographs
+    {0xFF00, 0xFFEF}, // Fullwidth forms
+};
+
+const int range_japanese[][2] = {
+    {0x0020, 0x07E},  // Basic ASCII
+    {0x3000, 0x30FF}, // Hiragana, Katakana, CJK Symbols and Punctuation
+    {0xFF00, 0xFFEF}, // Fullwidth forms
+};
+
+const int range_korean[][2] = {
+    {0x0020, 0x07E},  // Basic ASCII
+    {0xAC00, 0xD7AF}, // Hangul Syllables
+    {0xFF00, 0xFFEF}, // Fullwidth forms
+};
+
+const int range_latin_multilang[][2] = {
+    {0x0020, 0x07E},  // Basic ASCII
+    {0x00A0, 0x00FF}, // Latin-1 Supplement
+    {0x2000, 0x206F}, // General punctuation
+    {0xFF00, 0xFFEF}, // Fullwidth forms
+};
+
+static font_t body_font;
+static font_t header_font;
 
 static SDL_GameController *controller = NULL;
 
@@ -77,8 +105,20 @@ void _putc(int c, void *ctx)
     }
 }
 
-static const unsigned char RobotoMono_Regular[] = {
-#embed "assets/RobotoMono-Regular.ttf"
+static const unsigned char NotoSans_Regular[] = {
+#embed "assets/NotoSans-Regular.ttf"
+};
+
+static const unsigned char NotoSansJP_Regular[] = {
+#embed "assets/NotoSansJP-Regular.ttf"
+};
+
+static const unsigned char NotoSansKR_Regular[] = {
+#embed "assets/NotoSansKR-Regular.ttf"
+};
+
+static const unsigned char NotoSansSC_Regular[] = {
+#embed "assets/NotoSansSC-Regular.ttf"
 };
 
 static const unsigned char UbuntuMono_Regular[] = {
@@ -91,6 +131,7 @@ static const unsigned char background_png[] = {
 
 int main(void)
 {
+    int result;
     XVideoSetMode(WINDOW_WIDTH, WINDOW_HEIGHT, 32, REFRESH_DEFAULT);
 
     nxUnmountDrive('D');
@@ -120,22 +161,37 @@ int main(void)
     KeQuerySystemTime(&seed);
     srand(seed.LowPart);
 
+    // Read in language from EEPROM to determine which font family to use
+    ULONG language, type = 0;
+    ExQueryNonVolatileSetting(XC_LANGUAGE, &type, &language, sizeof(language), NULL);
+    const unsigned char *font_data;
+    const void *range;
+    int range_count;
+    if (language == XBOX_EEPROM_LANGUAGE_ID_JAPANESE) {
+        font_data = NotoSansJP_Regular;
+        range = range_japanese;
+        range_count = sizeof(range_japanese) / sizeof(range_japanese[0]);
+    } else if (language == XBOX_EEPROM_LANGUAGE_ID_KOREAN) {
+        font_data = NotoSansKR_Regular;
+        range = range_korean;
+        range_count = sizeof(range_korean) / sizeof(range_korean[0]);
+    } else if (language == XBOX_EEPROM_LANGUAGE_ID_CHINESE) {
+        font_data = NotoSansSC_Regular;
+        range = range_simplified_chinese;
+        range_count = sizeof(range_simplified_chinese) / sizeof(range_simplified_chinese[0]);
+    } else {
+        font_data = NotoSans_Regular;
+        range = range_latin_multilang;
+        range_count = sizeof(range_latin_multilang) / sizeof(range_latin_multilang[0]);
+    }
+
     // Create font texture for body text
-    int final_height = 0;
-    font_texture_bitmap = malloc(FONT_BITMAP_WIDTH * FONT_BITMAP_HEIGHT);
-    final_height = stbtt_BakeFontBitmap(RobotoMono_Regular, 0, BODY_FONT_SIZE, font_texture_bitmap,
-                                        FONT_BITMAP_WIDTH, FONT_BITMAP_HEIGHT, 32, 96, body_text_cdata);
-    assert(final_height > 0);
-    body_text = texture_create(font_texture_bitmap, FONT_BITMAP_WIDTH, final_height, XGU_TEXTURE_FORMAT_A8);
-    assert(body_text);
+    result = text_create(font_data, BODY_FONT_SIZE, range, range_count, &body_font);
+    assert(result == 0);
 
     // Create font texture for header text
-    final_height = stbtt_BakeFontBitmap(UbuntuMono_Regular, 0, HEADER_FONT_SIZE, font_texture_bitmap,
-                                        FONT_BITMAP_WIDTH, FONT_BITMAP_HEIGHT, 32, 96, header_text_cdata);
-    assert(final_height > 0);
-    header_text = texture_create(font_texture_bitmap, FONT_BITMAP_WIDTH, final_height, XGU_TEXTURE_FORMAT_A8);
-    assert(header_text);
-    free(font_texture_bitmap);
+    result = text_create(UbuntuMono_Regular, HEADER_FONT_SIZE, (const int[][2]){{32, 127}}, 1, &header_font);
+    assert(result == 0);
 
     // Create background texture
     int width, height, channels;
@@ -168,7 +224,7 @@ int main(void)
             ULONGLONG percent_free = ((free_bytes.QuadPart / 1024ULL) * 100ULL) / (total_bytes.QuadPart / 1024ULL);
             if (percent_free < 5ULL) {
                 if (char_offset == 0) {
-                    char_offset += snprintf(&warning_text[char_offset], sizeof(warning_text) - char_offset, "Warning\nLow storage space on partitions:");
+                    char_offset += snprintf(&warning_text[char_offset], sizeof(warning_text) - char_offset, "KEY_LOW_SPACE_WARNING");
                 }
                 char_offset += snprintf(&warning_text[char_offset], sizeof(warning_text) - char_offset, " %c,", drive_letters[i][0]);
             }
@@ -257,7 +313,7 @@ int main(void)
         renderer_draw_textured_rectangle(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT, background_texture, NULL, &boundary);
 
         // Render the header text
-        text_draw(header_text_cdata, header_text, "xemu", X_MARGIN, HEADER_Y, &highlight_color);
+        text_draw(&header_font, "xemu", X_MARGIN, HEADER_Y, &highlight_color);
 
         char menu_text_buffer[64];
 
@@ -266,23 +322,23 @@ int main(void)
         GetLocalTime(&systemtime);
         snprintf(menu_text_buffer, sizeof(menu_text_buffer), "%04d-%02d-%02d %02d:%02d:%02d", systemtime.wYear, systemtime.wMonth, systemtime.wDay,
                  systemtime.wHour, systemtime.wMinute, systemtime.wSecond);
-        text_draw(body_text_cdata, body_text, menu_text_buffer, WINDOW_WIDTH - X_MARGIN - text_calculate_width(body_text_cdata, menu_text_buffer),
+        text_draw(&body_font, menu_text_buffer, WINDOW_WIDTH - X_MARGIN - text_calculate_width(&body_font, menu_text_buffer),
                   Y_MARGIN + BODY_FONT_SIZE + BODY_FONT_SIZE, &info_color);
 
         // Render footer text
-        snprintf(menu_text_buffer, sizeof(menu_text_buffer), "Waiting for a Xbox DVD");
-        text_draw(body_text_cdata, body_text, menu_text_buffer, WINDOW_WIDTH - X_MARGIN - text_calculate_width(body_text_cdata, menu_text_buffer),
+        snprintf(menu_text_buffer, sizeof(menu_text_buffer), "KEY_DVD_STATUS");
+        text_draw(&body_font, menu_text_buffer, WINDOW_WIDTH - X_MARGIN - text_calculate_width(&body_font, menu_text_buffer),
                   FOOTER_Y, &text_color);
 
         char network_status[32];
         network_get_status(network_status, sizeof(network_status));
-        snprintf(menu_text_buffer, sizeof(menu_text_buffer), "FTP Server - %s", network_status);
-        text_draw(body_text_cdata, body_text, menu_text_buffer, WINDOW_WIDTH - X_MARGIN - text_calculate_width(body_text_cdata, menu_text_buffer),
+        snprintf(menu_text_buffer, sizeof(menu_text_buffer), "FTP - %s", network_status);
+        text_draw(&body_font, menu_text_buffer, WINDOW_WIDTH - X_MARGIN - text_calculate_width(&body_font, menu_text_buffer),
                   FOOTER_Y + BODY_FONT_SIZE, &text_color);
 
         // Render the build version
         snprintf(menu_text_buffer, sizeof(menu_text_buffer), "%s", GIT_VERSION);
-        text_draw(body_text_cdata, body_text, menu_text_buffer, WINDOW_WIDTH - X_MARGIN - text_calculate_width(body_text_cdata, menu_text_buffer),
+        text_draw(&body_font, menu_text_buffer, WINDOW_WIDTH - X_MARGIN - text_calculate_width(&body_font, menu_text_buffer),
                   Y_MARGIN + BODY_FONT_SIZE, &info_color);
 
         // Render the actual menu items
@@ -326,23 +382,20 @@ Menu *menu_peak(void)
 
 static void render_menu(void)
 {
-    const stbtt_bakedchar *datum = &body_text_cdata['(' - 32];
-    const int item_height = (const int)(datum->y1 - datum->y0) + ITEM_PADDING;
-
     Menu *current_menu = menu_peak();
     assert(current_menu != NULL);
 
     // The first line of each menu is reserved for the menu title
-    text_draw(body_text_cdata, body_text, current_menu->item[0].label, X_MARGIN, MENU_Y, &header_color);
+    text_draw(&body_font, current_menu->item[0].label, X_MARGIN, MENU_Y, &header_color);
 
     renderer_set_scissor(0, MENU_Y + ITEM_PADDING, WINDOW_WIDTH, FOOTER_Y - (int)BODY_FONT_SIZE - MENU_Y);
 
-    const int selected_y_bottom = MENU_Y + current_menu->selected_index * item_height +
+    const int selected_y_bottom = MENU_Y + current_menu->selected_index * (int)body_font.line_height +
                                   current_menu->scroll_offset + ITEM_PADDING;
-    const int selected_y_top = selected_y_bottom - item_height;
+    const int selected_y_top = selected_y_bottom - (int)body_font.line_height;
 
     // Start at the bottom of the first menu item
-    int y = MENU_Y + item_height;
+    int y = MENU_Y + (int)body_font.line_height;
 
     // Scroll the selected item to be in view
     if (selected_y_top < MENU_Y + ITEM_PADDING) {
@@ -352,6 +405,7 @@ static void render_menu(void)
     }
 
     for (int i = 1; i < current_menu->item_count; ++i) {
+
         xgu_texture_tint_t color;
         if (current_menu->item[i].callback == NULL) {
             color = info_color;
@@ -362,10 +416,10 @@ static void render_menu(void)
         }
 
         WaitForSingleObject(text_render_mutex, INFINITE);
-        text_draw(body_text_cdata, body_text, current_menu->item[i].label, X_MARGIN,
+        text_draw(&body_font, current_menu->item[i].label, X_MARGIN,
                   y + current_menu->scroll_offset, &color);
         ReleaseMutex(text_render_mutex);
-        y += item_height;
+        y += body_font.line_height;
     }
 
     renderer_set_scissor(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
@@ -378,11 +432,11 @@ static void cleanup(void)
     if (controller) {
         SDL_GameControllerClose(controller);
     }
-    if (body_text) {
-        texture_destroy(body_text);
+    if (body_font.texture) {
+        texture_destroy(body_font.texture);
     }
-    if (header_text) {
-        texture_destroy(header_text);
+    if (header_font.texture) {
+        texture_destroy(header_font.texture);
     }
     if (background_texture) {
         texture_destroy(background_texture);

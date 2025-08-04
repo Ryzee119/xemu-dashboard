@@ -1,0 +1,82 @@
+{
+  "KEY_LOW_SPACE_WARNING": {
+    "en": "Warning\nLow storage space on partitions:",
+    "ja": "警告\nパーティションの空き容量が少なくなっています：",
+    "de": "Warnung\nWenig Speicherplatz auf Partitionen:",
+    "fr": "Avertissement\nEspace de stockage faible sur les partitions :",
+    "es": "Advertencia\nEspacio de almacenamiento bajo en las particiones:",
+    "it": "Avviso\nSpazio di archiviazione basso sulle partizioni:",
+    "ko": "경고\n파티션의 저장 공간이 부족합니다:",
+    "zh": "警告\n分区存储空间不足：",
+    "pt": "Aviso\nPouco espaço de armazenamento nas partições:"
+  },
+  "KEY_DVD_STATUS": {
+    "en": "Waiting for a Xbox DVD",
+    "ja": "XboxのDVDを挿入してください",
+    "de": "Warte auf eine Xbox-DVD",
+    "fr": "En attente d’un DVD Xbox",
+    "es": "Esperando un DVD de Xbox",
+    "it": "In attesa di un DVD Xbox",
+    "ko": "Xbox DVD를 기다리는 중",
+    "zh": "正在等待 Xbox 光盘",
+    "pt": "Aguardando um DVD do Xbox"
+  },
+  "KEY_BACKUP_SUCCESS": {
+    "en": "Backup restored successfully",
+    "ja": "バックアップが正常に復元されました",
+    "de": "Backup erfolgreich wiederhergestellt",
+    "fr": "Sauvegarde restaurée avec succès",
+    "es": "Copia de seguridad restaurada correctamente",
+    "it": "Backup ripristinato con successo",
+    "ko": "백업이 성공적으로 복원되었습니다",
+    "zh": "备份已成功恢复",
+    "pt": "Backup restaurado com sucesso"
+  },
+  "KEY_EEPROM_MENU_TITLE": {
+    "en": "EEPROM Settings",
+    "ja": "EEPROM設定",
+    "de": "EEPROM-Einstellungen",
+    "fr": "Paramètres EEPROM",
+    "es": "Configuración EEPROM",
+    "it": "Impostazioni EEPROM",
+    "ko": "EEPROM 설정",
+    "zh": "EEPROM 设置",
+    "pt": "Configurações de EEPROM"
+  },
+  "KEY_EEPROM_RESTORE": {
+    "en": "Restore EEPROM Backup",
+    "ja": "EEPROMバックアップを復元",
+    "de": "EEPROM-Backup wiederherstellen",
+    "fr": "Restaurer la sauvegarde EEPROM",
+    "es": "Restaurar copia de seguridad de EEPROM",
+    "it": "Ripristina backup EEPROM",
+    "ko": "EEPROM 백업 복원",
+    "zh": "恢复 EEPROM 备份",
+    "pt": "Restaurar backup da EEPROM"
+  },
+  "KEY_APPLY_CHANGES": {
+    "en": "Apply unsaved changes",
+    "ja": "保存されていない変更を適用",
+    "de": "Nicht gespeicherte Änderungen übernehmen",
+    "fr": "Appliquer les modifications non enregistrées",
+    "es": "Aplicar los cambios no guardados",
+    "it": "Applica le modifiche non salvate",
+    "ko": "저장되지 않은 변경 사항 적용",
+    "zh": "应用未保存的更改",
+    "pt": "Aplicar alterações não salvas"
+  },
+  "KEY_APPLY": {
+    "en": "Apply",
+    "ja": "適用",
+    "de": "Übernehmen",
+    "fr": "Appliquer",
+    "es": "Aplicar",
+    "it": "Applica",
+    "ko": "적용",
+    "zh": "应用",
+    "pt": "Aplicar"
+  },
+
+}
+
+//Apply unsaved changes
